@@ -73,3 +73,11 @@ Plugins/**/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+# Python
+ai_model/venv/
+__pycache__/
+*.pyc
+
+# Python env
+.env
