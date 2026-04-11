@@ -82,7 +82,7 @@ __pycache__/
 # Python env
 .env
 
-# UE5 Ignore (필수)
+# UE5 Ignore
 Saved/
 Intermediate/
 DerivedDataCache/
