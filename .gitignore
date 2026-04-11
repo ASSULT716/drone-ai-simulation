@@ -81,3 +81,9 @@ __pycache__/
 
 # Python env
 .env
+
+# UE5 Ignore (필수)
+Saved/
+Intermediate/
+DerivedDataCache/
+*.log
