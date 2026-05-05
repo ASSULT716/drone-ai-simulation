@@ -89,7 +89,6 @@ DerivedDataCache/
 *.log
 
 # --- Unreal Engine 가비지 및 임시 파일 ---
-Binaries/
 DerivedDataCache/
 Intermediate/
 Saved/
