@@ -89,7 +89,6 @@ DerivedDataCache/
 *.log
 
 # --- Unreal Engine 가비지 및 임시 파일 ---
-Binaries/
 DerivedDataCache/
 Intermediate/
 Saved/
@@ -97,9 +96,9 @@ Saved/
 *.sln
 
 # --- 특정 대용량 에셋 제외 (선택 사항) ---
-# 스타터 콘텐츠 전체를 제외하고 싶을 때:
+# 스타터 콘텐츠 전체를 제외
 Content/StarterContent/
 
-# 특정 확장자만 제외하고 싶을 때 (예: 백업 파일):
+# 특정 확장자만 제외 (예: 백업 파일):
 *.bak
 *.sav
