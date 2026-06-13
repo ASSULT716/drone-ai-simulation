@@ -1,56 +1,62 @@
-from flask import Flask, request, jsonify
+import socket
+import struct
 import numpy as np
+# from sac_agent import SACAgent
+# from sac_model import DroneEngineAutoStartWrapper
 
-try:
-    from ai_model.sac_agent import SACAgent
-except ModuleNotFoundError:
-    from sac_agent import SACAgent
+# 🌟 수정 완료: State 56개 * 4바이트 = 총 224바이트 수신 대기
+STATE_DIM = 56
+PACKET_SIZE = STATE_DIM * 4
 
-app = Flask(__name__)
+def run_socket_server():
+    host = '0.0.0.0'
+    port = 5000
 
-agent = None
-previous_state = None
-EXPECTED_ACTION_DIM = 5 
-
-@app.route('/predict', methods=['POST'])
-def predict():
-    global agent, previous_state
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((host, port))
+    server_socket.listen(1)
     
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "데이터가 없습니다"}), 400
-        
-    current_state = data.get("state")
-    reward = data.get("reward", 0.0)
-    done = data.get("done", False)
+    print(f"🚀 [초고속 소켓 서버 가동] 포트 {port}에서 224바이트(56차원) 패킷 대기 중...")
     
-    state_dim = len(current_state)
-    
-    # 🌟 엔진에서 받은 데이터에 맞춰 뇌를 조립하고 오프라인 가중치 이식
-    if agent is None or agent.state_dim != state_dim:
-        print(f"\n📡 [입력 규격 감지] 센서 및 상태 데이터: {state_dim}차원")
-        agent = SACAgent(state_dim=state_dim, action_dim=EXPECTED_ACTION_DIM)
-        agent.load_models() 
-        previous_state = current_state
+    # agent = SACAgent()
+    # agent.load_models("models/sac_drone_base.zip")
 
-    # 1. 온라인 상호작용 데이터 버퍼에 저장
-    temp_action = np.zeros(EXPECTED_ACTION_DIM) 
-    agent.store_transition(previous_state, temp_action, reward, current_state, done)
-    
-    # 2. 실시간 파인튜닝 진행
-    agent.train_step()
+    while True:
+        client_socket, addr = server_socket.accept()
+        print(f"🔌 언리얼 엔진 접속 완료: {addr}")
 
-    # 3. 새로운 액션 도출
-    action = agent.select_action(current_state)
-    
-    if done:
-        previous_state = None
-        print("🚨 드론 리스폰! 에피소드 초기화")
-    else:
-        previous_state = current_state
+        try:
+            while True:
+                # 1. 224바이트 패킷 수신
+                data = client_socket.recv(PACKET_SIZE)
+                if not data:
+                    break
 
-    return jsonify({"action": action.tolist()})
+                if len(data) == PACKET_SIZE:
+                    # 2. 224바이트 ➔ 56개의 실수(Float)로 즉시 언팩
+                    raw_state_array = struct.unpack(f'{STATE_DIM}f', data)
+                    
+                    # 3. (래퍼 전처리 통과)
+                    # processed_state = env._preprocess_obs(raw_state_array)
+                    
+                    # 4. AI 액션 도출 (출력 6개!)
+                    # action_from_ai = agent.select_action(processed_state)
+                    action_from_ai = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]  # 임시 6차원 스틱 입력
+                    
+                    # 5. 시동 제어 플래그(Cmd_Engine) 추가 ➔ 총 7개의 숫자 전송
+                    # (만약 언리얼에서 엔진 시동 명령을 안 받는 구조라면 이 부분을 수정하면 됩니다)
+                    final_action = action_from_ai + [1.0] 
+                    
+                    # 6. 액션(7개*4바이트 = 28바이트)을 팩(Pack)해서 언리얼로 리턴!
+                    response_data = struct.pack('7f', *final_action)
+                    client_socket.sendall(response_data)
+                else:
+                    print(f"⚠️ 패킷 누락 발생: {len(data)} 바이트 수신됨")
+                    
+        except ConnectionResetError:
+            print("🚨 언리얼 엔진 시뮬레이터가 종료되었거나 연결이 끊어졌습니다.")
+        finally:
+            client_socket.close()
 
 if __name__ == '__main__':
-    print("🚀 [하이브리드 SAC 통신 서버] 가동 완료! (포트: 5000)")
-    app.run(host='0.0.0.0', port=5000)
+    run_socket_server()
