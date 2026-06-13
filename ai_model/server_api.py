@@ -1,59 +1,62 @@
-from flask import Flask, request, jsonify
+import socket
+import struct
 import numpy as np
-import torch
 # from sac_agent import SACAgent
-# from sac_model import DroneEngineAutoStartWrapper (사용하는 환경 구성에 따라 맞게 임포트)
+# from sac_model import DroneEngineAutoStartWrapper
 
-app = Flask(__name__)
+# 🌟 수정 완료: State 56개 * 4바이트 = 총 224바이트 수신 대기
+STATE_DIM = 56
+PACKET_SIZE = STATE_DIM * 4
 
-# 1. 기지국 가동 시, 오프라인 학습으로 완성된 뼈대 모델(.zip) 단 한 번 로드
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# agent = SACAgent(device=device)
-# agent.load_models("models/sac_drone_base.zip")
-print("✅ [서버 준비] 베이스 모델 로드 완료. 실시간 무전 대기 중...")
+def run_socket_server():
+    host = '0.0.0.0'
+    port = 5000
 
-# 이전 스텝의 데이터를 기억하기 위한 전역 변수
-previous_state = None
-
-@app.route('/predict', methods=['POST'])
-def predict():
-    global previous_state
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((host, port))
+    server_socket.listen(1)
     
-    # 2. 언리얼 엔진에서 0.05초마다 쏘는 JSON 날것의 데이터 수신
-    raw_dict = request.json
+    print(f"🚀 [초고속 소켓 서버 가동] 포트 {port}에서 224바이트(56차원) 패킷 대기 중...")
     
-    if not raw_dict:
-        return jsonify({"error": "No data received"}), 400
+    # agent = SACAgent()
+    # agent.load_models("models/sac_drone_base.zip")
 
-    # 3. 우진님의 래퍼 전처리 로직을 이용해 45차원으로 깎아냄 (임시로 래퍼 함수 직접 호출하는 방식 예시)
-    # 실제로는 env.step() 구조에 맞게 조립되어 있을 것입니다.
-    # current_state = env._preprocess_obs(raw_dict) 
-    
-    # (아래는 임시 더미 데이터입니다. 실제 래퍼를 통과한 current_state를 사용하세요)
-    current_state = np.zeros(45, dtype=np.float32) 
-    done = bool(raw_dict.get('Done_State', 0) in [1, 2, 3])
-    reward = float(raw_dict.get('Step_Reward', 0.1))
+    while True:
+        client_socket, addr = server_socket.accept()
+        print(f"🔌 언리얼 엔진 접속 완료: {addr}")
 
-    # 4. (선택 사항) 실시간 파인 튜닝 로직
-    """
-    if previous_state is not None:
-        agent.store_transition(previous_state, temp_action, reward, current_state, done)
-        agent.train_step() # 실시간 1스텝 학습
-    """
+        try:
+            while True:
+                # 1. 224바이트 패킷 수신
+                data = client_socket.recv(PACKET_SIZE)
+                if not data:
+                    break
 
-    # 5. AI의 뇌에서 액션(6차원) 도출
-    # action = agent.select_action(current_state)
-    action = np.zeros(6, dtype=np.float32) # 임시 더미 액션
-
-    if done:
-        previous_state = None
-        print("🚨 드론 리스폰! 에피소드 초기화")
-    else:
-        previous_state = current_state
-
-    # 6. 언리얼 엔진으로 답장(Response) 쏘기
-    return jsonify({"action": action.tolist()})
+                if len(data) == PACKET_SIZE:
+                    # 2. 224바이트 ➔ 56개의 실수(Float)로 즉시 언팩
+                    raw_state_array = struct.unpack(f'{STATE_DIM}f', data)
+                    
+                    # 3. (래퍼 전처리 통과)
+                    # processed_state = env._preprocess_obs(raw_state_array)
+                    
+                    # 4. AI 액션 도출 (출력 6개!)
+                    # action_from_ai = agent.select_action(processed_state)
+                    action_from_ai = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]  # 임시 6차원 스틱 입력
+                    
+                    # 5. 시동 제어 플래그(Cmd_Engine) 추가 ➔ 총 7개의 숫자 전송
+                    # (만약 언리얼에서 엔진 시동 명령을 안 받는 구조라면 이 부분을 수정하면 됩니다)
+                    final_action = action_from_ai + [1.0] 
+                    
+                    # 6. 액션(7개*4바이트 = 28바이트)을 팩(Pack)해서 언리얼로 리턴!
+                    response_data = struct.pack('7f', *final_action)
+                    client_socket.sendall(response_data)
+                else:
+                    print(f"⚠️ 패킷 누락 발생: {len(data)} 바이트 수신됨")
+                    
+        except ConnectionResetError:
+            print("🚨 언리얼 엔진 시뮬레이터가 종료되었거나 연결이 끊어졌습니다.")
+        finally:
+            client_socket.close()
 
 if __name__ == '__main__':
-    # 서버 가동
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    run_socket_server()
