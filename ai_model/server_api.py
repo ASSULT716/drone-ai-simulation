@@ -150,6 +150,9 @@ def run_server():
                     action_list = action.tolist() if isinstance(action, np.ndarray) else action
                     osc_client.send_message("/drone/input", action_list)
                     
+                    # 💡 전송 확인용 로그
+                    print(f"🎯 [OSC 송신] 언리얼로 조종 명령 전송 완료! (파일: {os.path.basename(latest_file)})")
+                    
             # 5. 처리 완료 후 현재 상태 기록 업데이트
             last_processed_file = latest_file
             last_mtime = mtime
