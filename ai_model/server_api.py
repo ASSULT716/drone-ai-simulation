@@ -97,6 +97,20 @@ def run_socket_server():
                 raw_array = struct.unpack(f'{IN_PACKET_DIM}f', data)
                 
                 current_step = int(raw_array[0])
+                done_state = int(raw_array[1])  # BIN index 2 (Done_State)
+
+                if done_state > 0:
+                    # 1. 시동/AI 제어 관련 플래그 초기화
+                    has_pressed_i = False
+                    
+                    # 2. 물리 엔진 안정화용 중립 패킷 생성
+                    final_action = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                    response_data = struct.pack(f'{OUT_PACKET_DIM}f', *final_action)
+                    client_socket.sendall(response_data)
+                    
+                    # 3. AI 연산(preprocess 및 model.predict)을 거치지 않고 루프 최상단으로 복귀
+                    continue
+
                 is_engine_on = (raw_array[18] >= 0.5)     # 19번째: Is_On_Bool
                 is_ai_controlled = (raw_array[21] >= 0.5) # 22번째: Is_AI_Controlled
                 
