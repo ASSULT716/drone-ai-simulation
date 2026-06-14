@@ -9,7 +9,7 @@ import glob
 INPUT_DIR  = 'data\\raw_data'
 OUTPUT_DIR = 'data\\processed_data'
 
-# [정밀 동기화] 언리얼 엔진에서 생성되는 총 71개 원본 CSV 컬럼의 정확한 순서
+# [정밀 동기화] 언리얼 엔진에서 생성되는 총 72개 원본 CSV 컬럼의 정확한 순서
 ALL_COLS = [
     'Episode_Count', 'Current_step', 'Elapsed_Time',
     'Dist_to_Max_X', 'Dist_to_Min_X', 'Dist_to_Max_Y', 'Dist_to_Min_Y', 'Dist_to_Ceiling',
@@ -24,14 +24,14 @@ ALL_COLS = [
     'Lidar_285', 'Lidar_300', 'Lidar_315', 'Lidar_330', 'Lidar_345', 'Lidar_360',
     'Lidar_Down_90', 'Dest_Rel_Distance', 'Dest_Rel_Yaw', 'Dest_Rel_Pitch',
     'Cmd_Engine', 'Is_On_Bool', 'Is_Ready_To_Fly_Bool', 'Engine_Power',
-    'Step_Reward', 'Done_State', 'Pressing_I', 'Is_AI_Controlled'
+    'Step_Reward', 'Done_State', 'Pressing_I', 'Is_AI_Controlled', 'Is_Pressing_Backspace'
 ]
 
 # ==============================================================================
-# 2. .bin 파일 규격과 100% 일치시킨 State(61차원) 및 Action(6차원) 정의
+# 2. .bin 파일 규격과 100% 일치시킨 State(62차원) 및 Action(6차원) 정의
 # ==============================================================================
 STATE_FEATURES = [
-    'Current_step',            # 1. Current_step (스텝 번호)
+    'Current_step',          # 1. Current_step (스텝 번호)
     'Done_State',            # 2. Done_state ({0:진행중, 1:성공, 2:피격, 3:이탈})
     'Step_Reward',           # 3. Step_reward (보상 변수)
     'Dist_to_Max_X',         # 4. Distance to Max X
@@ -53,14 +53,14 @@ STATE_FEATURES = [
     'Is_Ready_To_Fly_Bool',  # 20. 엔진 추력 100% 여부
     'Pressing_I',            # 21. I키 입력 여부
     'Is_AI_Controlled',      # 22. AI 조종 여부 (1=AI, 0=사람)
-    
-    # 23~27. 가장 높은 위협 수준의 적 정보 (Type, Rel_X, Rel_Y, Rel_Z, Threat)
+    'Is_Pressing_Backspace', # 23. Backspace 키 입력 여부
+    # 24~28. 가장 높은 위협 수준의 적 정보 (Type, Rel_X, Rel_Y, Rel_Z, Threat)
     'Enemy1_Type', 'Enemy1_Rel_X', 'Enemy1_Rel_Y', 'Enemy1_Rel_Z', 'Enemy1_Threat_Level',
-    # 28~32. 두 번째로 높은 위협 수준의 적 정보
+    # 29~33. 두 번째로 높은 위협 수준의 적 정보
     'Enemy2_Type', 'Enemy2_Rel_X', 'Enemy2_Rel_Y', 'Enemy2_Rel_Z', 'Enemy2_Threat_Level',
-    # 33~37. 세 번째로 높은 위협 수준의 적 정보
+    # 34~38. 세 번째로 높은 위협 수준의 적 정보
     'Enemy3_Type', 'Enemy3_Rel_X', 'Enemy3_Rel_Y', 'Enemy3_Rel_Z', 'Enemy3_Threat_Level',
-] + [f'Lidar_{i * 15}' for i in range(1, 25)]  # 38~61. 정면 기준 15도~360도 라이다 (24차원)
+] + [f'Lidar_{i * 15}' for i in range(1, 25)]  # 39~62. 정면 기준 15도~360도 라이다 (24차원)
 
 # 조종 입력 Action (6차원)
 ACTION_FEATURES = [
@@ -72,7 +72,7 @@ ACTION_FEATURES = [
 # 3. 데이터 필터링용 상숫값
 # ==============================================================================
 MAX_TIME_GAP = 0.15      # 초    | 프레임 드랍 판단 기준
-MAX_STEPS    = 7000      # 스텝  | 에피소드 최대 길이
+MAX_STEPS    = 10000      # 스텝  | 에피소드 최대 길이
 
 # ==============================================================================
 # 4. 전처리 파이프라인 함수 (스케일링 완전 제거 버전)
