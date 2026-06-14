@@ -1,51 +1,79 @@
-import numpy as np
 import os
-import torch
-# (사용 중이신 sac_agent 라이브러리나 SB3를 임포트하세요)
-# from sac_agent import SACAgent 
+import glob
+import numpy as np
 
-def run_offline_training():
-    print("🚀 [오프라인 학습 시작] NPZ 데이터 로드 중...")
+# 🌟 같은 폴더(ai_model)에 있는 에이전트 클래스 참조
+try:
+    from sac_agent import SACAgent
+except ModuleNotFoundError:
+    from ai_model.sac_agent import SACAgent
+
+# 🌟 파일 위치가 ai_model 내부이므로, 상위 프로젝트 루트 경로를 자동 계산
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(BASE_DIR, "data", "processed_data")
+MODEL_SAVE_DIR = os.path.join(BASE_DIR, "ai_model", "model")
+
+def load_npz_data(filepath):
+    data = np.load(filepath)
+    return {
+        'states': data['states'],
+        'actions': data['actions'],
+        'rewards': data['rewards'],
+        'next_states': data['next_states'],
+        'terminateds': data['terminateds'],
+        'truncateds': data['truncateds']
+    }
+
+def train_offline():
+    # processed_data 폴더 안의 모든 npz 파일을 탐색
+    npz_files = glob.glob(os.path.join(DATA_DIR, "*.npz"))
     
-    # 1. 2번 담당자가 만든 통짜 NPZ 파일 경로 (CSV 절대 안 씀!)
-    npz_path = "data/processed_data.npz"
-    
-    if not os.path.exists(npz_path):
-        print(f"❌ [에러] {npz_path} 파일이 없습니다! 전처리 담당자에게 NPZ 파일을 요청하세요.")
+    if not npz_files:
+        print(f"🚨 '{DATA_DIR}' 폴더에 학습할 데이터(.npz)가 없습니다. 전처리를 먼저 진행해주세요.")
         return
 
-    # 2. NPZ 파일 메모리에 한 번에 올리기 (초고속)
-    dataset = np.load(npz_path)
-    states = dataset['states']           # (N, 45) 차원
-    actions = dataset['actions']         # (N, 6) 차원
-    rewards = dataset['rewards']
-    next_states = dataset['next_states']
-    dones = dataset['terminateds']
-    
-    print(f"✅ 데이터 로드 완료! 총 {len(states)}개의 스텝을 학습합니다.")
-    print(f" -> State 형태: {states.shape} | Action 형태: {actions.shape}")
+    print(f"🚀 [오프라인 학습 시작] 총 {len(npz_files)}개의 데이터 파일을 로드합니다.")
 
-    # 3. GPU 자동 세팅 (GTX 1660 포함 범용 세팅)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"🔥 학습 장치 가동: {device}")
-
-    # 4. SAC 모델 초기화 및 리플레이 버퍼에 데이터 밀어넣기
-    # (아래는 예시 코드입니다. 우진님의 sac_agent 구조에 맞게 수정하세요)
-    """
-    agent = SACAgent(state_dim=45, action_dim=6, device=device)
+    # 🌟 62차원 State, 8차원 Action 완벽 동기화하여 에이전트 선언
+    agent = SACAgent(state_dim=62, action_dim=8)
     
-    print("📥 리플레이 버퍼에 NPZ 데이터 삽입 중...")
-    for i in range(len(states)):
-        agent.memory.push(states[i], actions[i], rewards[i], next_states[i], dones[i])
+    # 기존 가중치(.pth)가 있다면 누적해서 디벨롭 학습 진행
+    agent.load_models(path=MODEL_SAVE_DIR + "/")
+
+    total_transitions_added = 0
+    
+    # 모든 npz 파일의 데이터를 추출하여 에이전트 메모리에 적재
+    for npz_file in npz_files:
+        print(f"📥 데이터 적재 중... [{os.path.basename(npz_file)}]")
+        batch_data = load_npz_data(npz_file)
         
-    print("🧠 오프라인 베이스 모델(Behavioral Cloning) 학습 진행 중...")
-    agent.train_offline(epochs=50) # 버퍼의 데이터를 이용한 사전 학습
+        num_samples = len(batch_data['states'])
+        for i in range(num_samples):
+            state = batch_data['states'][i]
+            action = batch_data['actions'][i]
+            reward = float(batch_data['rewards'][i])
+            next_state = batch_data['next_states'][i]
+            
+            # terminal(성공/죽음) 플래그 통합
+            done = bool(batch_data['terminateds'][i] or batch_data['truncateds'][i])
+            
+            agent.store_transition(state, action, reward, next_state, done)
+            total_transitions_added += 1
+
+    print(f"\n✅ 총 {total_transitions_added}개의 경험(Transition)이 메모리에 정상 적재되었습니다.")
+    print("🧠 딥러닝 역전파(Backpropagation) 최적화 훈련을 시작합니다...")
+
+    # 적재된 데이터 양에 비례하여 훈련 횟수 설정 (데이터 10개당 1회 학습 비율)
+    train_iterations = total_transitions_added // 10 
     
-    # 5. 가중치 저장
-    os.makedirs('models', exist_ok=True)
-    agent.save("models/sac_drone_base.zip")
-    """
-    print("🎉 [학습 완료] 완성된 뇌가 'models/sac_drone_base.zip' 에 저장되었습니다.")
+    for iteration in range(train_iterations):
+        agent.train_step()
+        if (iteration + 1) % 1000 == 0:
+            print(f"📊 학습 진행률: {iteration + 1} / {train_iterations} 완료")
+
+    # 새롭게 업데이트된 최적의 뇌 가중치 파일 덮어쓰기 저장
+    agent.save_models(path=MODEL_SAVE_DIR + "/")
+    print("\n🎉 [학습 완료] 완성된 뇌 가중치가 'ai_model/model/' 폴더에 안전하게 저장되었습니다!")
 
 if __name__ == "__main__":
-    run_offline_training()
+    train_offline()
