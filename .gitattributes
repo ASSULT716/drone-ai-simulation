@@ -3,3 +3,5 @@
 Content/**/*.uasset filter=lfs diff=lfs merge=lfs -text
 Content/**/*.umap filter=lfs diff=lfs merge=lfs -text
 Content/**/*.fbx filter=lfs diff=lfs merge=lfs -text
+*.pdb filter=lfs diff=lfs merge=lfs -text
+ue5_project/drone_simulation/Binaries/Win64/* filter=lfs diff=lfs merge=lfs -text
