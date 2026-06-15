@@ -99,6 +99,7 @@ def run_server():
     
     episode_start_time = None  
     backspace_hold_until = 0.0 
+    engine_started = False  # 💡 [추가] 이번 에피소드에서 시동을 걸었는지 확인하는 변수
     
     os.makedirs(BIN_DIR_PATH, exist_ok=True)
 
@@ -167,7 +168,8 @@ def run_server():
                         last_size = fsize
                         episode_start_time = None  # 에피소드 종료/재시작 시 타이머 리셋
                         backspace_hold_until = 0.0 # 💡 [추가] 에피소드가 끝나면 백스페이스 누름 상태도 뗌(초기화)
-                        continue 
+                        engine_started = False     # 💡 [추가] 다음 에피소드를 위해 시동 변수 리셋
+                        continue
                     
                     # ==========================================
                     # 🧠 1. AI Action 추론
@@ -189,11 +191,14 @@ def run_server():
                     processed_action[4] = action[4]
                     processed_action[5] = action[5]
 
-                    # 7. Pressing_I (초반 대기 후 AI 제어권 이양)
-                    if elapsed_time < 1.6:
-                        processed_action[6] = 0.0
+                    # ==========================================
+                    # 💡 7. Pressing_I (AI 제어 차단, 1.6초 후 단 한 번만 1 출력)
+                    # ==========================================
+                    if elapsed_time >= 1.6 and not engine_started:
+                        processed_action[6] = 1.0  # 1.6초가 지났고 시동을 안 걸었다면 1 출력
+                        engine_started = True      # 시동을 걸었다고 상태 업데이트
                     else:
-                        processed_action[6] = 1.0 if action[6] > 0 else 0.0
+                        processed_action[6] = 0.0  # 그 외의 모든 순간(1.6초 이전, 또는 시동 건 직후)에는 0 유지
 
                     # ==========================================
                     # 💡 8. Is_Pressing_Backspace (리트라이 꾹 누르기 강제 유지)
