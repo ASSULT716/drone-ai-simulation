@@ -134,11 +134,68 @@ def run_server():
                         continue 
                     
                     action = agent.select_action(current_state)
+
+                    # ... (생략: 윗부분 코드) ...
+                    
+                    if done_state != 0:
+                        last_state = None
+                        last_action = None
+                        last_processed_file = latest_file
+                        last_mtime = mtime
+                        last_size = fsize
+                        continue 
+                    
+                    # 💡 AI가 8개의 액션을 뽑아내는 바로 이 줄!
+                    action = agent.select_action(current_state)
+                    
+                    # ==========================================
+                    # 🔍 [이현수님 디버깅 코드 시작]
+                    # ==========================================
+                    try:
+                        # 1. 만약 PyTorch Tensor나 NumPy 배열이라면 일반 파이썬 리스트로 변환
+                        if hasattr(action, "detach"): # PyTorch용
+                            debug_list = action.detach().cpu().numpy().tolist()
+                        elif hasattr(action, "tolist"): # NumPy용
+                            debug_list = action.tolist()
+                        else:
+                            debug_list = list(action) # 일반 이터러블용
+
+                        # 2. 터미널(콘솔)에 보기 좋게 출력
+                        import datetime
+                        current_time = datetime.datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                        
+                        # 보기 편하게 소수점 4자리까지만 자름
+                        formatted_list = [round(float(x), 4) for x in debug_list]
+                        print(f"[{current_time}] [디버깅] 개수: {len(formatted_list)}개 | 데이터: {formatted_list}")
+
+                    except Exception as e:
+                        print(f"[디버깅 에러] 출력 실패: {e}")
+                    # ==========================================
+                    # 🔍 [이현수님 디버깅 코드 끝]
+                    # ==========================================
+
+                    last_state = current_state
+                    last_action = action
+                    
+                    action_list = action.tolist() if isinstance(action, np.ndarray) else action
+                    osc_client.send_message("/drone/input", action_list)
+                    
+                    # ... (생략: 아랫부분 코드) ...
                     
                     last_state = current_state
                     last_action = action
                     
                     action_list = action.tolist() if isinstance(action, np.ndarray) else action
+
+# ==========================================
+                    print("\n" + "="*40)
+                    print(f"🧠 AI 모델 추론 완료! (Step: {int(current_step)})")
+                    print("📊 [출력된 8개의 Action 값]")
+                    for i, val in enumerate(action_list):
+                        print(f"  ▶ Action [{i}] : {val:>8.4f}")
+                    print("="*40 + "\n")
+                    # ==========================================
+
                     osc_client.send_message("/drone/input", action_list)
                     
                     # 💡 연속 송신 확인 로그
