@@ -9,9 +9,9 @@ from pathlib import Path
 # ==============================================================================
 # 1. 경로 및 설정
 # ==============================================================================
-BASE_RL_DATA_DIR = 'data\\RL_data'        # 원본 데이터 루트
-OUTPUT_DIR       = 'data\\processed_data' # 기본 NPZ 저장 폴더
-BACKUP_ROOT_DIR  = 'data\\RL_data_backup'  # 통합 백업 루트 폴더
+BASE_RL_DATA_DIR = '..\\..\\data\\RL_data'        # 원본 데이터 루트
+OUTPUT_DIR       = '..\\..\\data\\processed_data' # 기본 NPZ 저장 폴더
+BACKUP_ROOT_DIR  = '..\\..\\data\\RL_data_backup'  # 통합 백업 루트 폴더
 
 ALL_COLS = [
     'Episode_Count', 'Current_step', 'Elapsed_Time',
