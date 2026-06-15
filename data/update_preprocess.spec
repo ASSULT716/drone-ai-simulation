@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['update_preprocess.py'],
+    ['Update_preprocess.py'],
     pathex=[],
     binaries=[],
     datas=[],
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='update_preprocess',
+    name='Update_preprocess',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
