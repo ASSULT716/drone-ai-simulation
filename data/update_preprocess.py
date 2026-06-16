@@ -28,6 +28,7 @@ ALL_COLS = [
     'Lidar_Down_90', 'Dest_Rel_Distance', 'Dest_Rel_Yaw', 'Dest_Rel_Pitch',
     'Cmd_Engine', 'Is_On_Bool', 'Is_Ready_To_Fly_Bool', 'Engine_Power',
     'Step_Reward', 'Done_State', 'Pressing_I', 'Is_AI_Controlled', 'Is_Pressing_Backspace',
+    'Current_Battery', 'Health',
 ]
 
 STATE_FEATURES = [
@@ -36,6 +37,7 @@ STATE_FEATURES = [
     'Velocity_X', 'Velocity_Y', 'Velocity_Z', 'Roll', 'Pitch', 'Yaw',
     'Lidar_Down_90', 'Dest_Rel_Distance', 'Dest_Rel_Yaw', 'Dest_Rel_Pitch',
     'Is_On_Bool', 'Is_Ready_To_Fly_Bool', 'Pressing_I', 'Is_AI_Controlled', 'Is_Pressing_Backspace',
+    'Current_Battery', 'Health',
     'Enemy1_Type', 'Enemy1_Rel_X', 'Enemy1_Rel_Y', 'Enemy1_Rel_Z', 'Enemy1_Threat_Level',
     'Enemy2_Type', 'Enemy2_Rel_X', 'Enemy2_Rel_Y', 'Enemy2_Rel_Z', 'Enemy2_Threat_Level',
     'Enemy3_Type', 'Enemy3_Rel_X', 'Enemy3_Rel_Y', 'Enemy3_Rel_Z', 'Enemy3_Threat_Level',
